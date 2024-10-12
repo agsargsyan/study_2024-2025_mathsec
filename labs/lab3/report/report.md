@@ -1,8 +1,8 @@
 ---
 ## Front matter
-title: "Шаблон отчёта по лабораторной работе"
-subtitle: "Простейший вариант"
-author: "Дмитрий Сергеевич Кулябов"
+title: "Отчет по лабораторной работе №3"
+subtitle: "Шифрование гаммированием"
+author: "Арам Грачьяевич Саргсян"
 
 ## Generic otions
 lang: ru-RU
@@ -70,50 +70,91 @@ header-includes:
 
 # Цель работы
 
-Здесь приводится формулировка цели лабораторной работы. Формулировки
-цели для каждой лабораторной работы приведены в методических
-указаниях.
-
-Цель данного шаблона --- максимально упростить подготовку отчётов по
-лабораторным работам.  Модифицируя данный шаблон, студенты смогут без
-труда подготовить отчёт по лабораторным работам, а также познакомиться
-с основными возможностями разметки Markdown.
+Изучить метод шифрования гаммированием
 
 # Задание
 
-Здесь приводится описание задания в соответствии с рекомендациями
-методического пособия и выданным вариантом.
+Реализовать алгоритм шифрования конечной гаммой.
 
 # Теоретическое введение
 
-Здесь описываются теоретические аспекты, связанные с выполнением работы.
-
-Например, в табл. [-@tbl:std-dir] приведено краткое описание стандартных каталогов Unix.
-
-: Описание некоторых каталогов файловой системы GNU Linux {#tbl:std-dir}
-
-| Имя каталога | Описание каталога                                                                                                          |
-|--------------|----------------------------------------------------------------------------------------------------------------------------|
-| `/`          | Корневая директория, содержащая всю файловую                                                                               |
-| `/bin `      | Основные системные утилиты, необходимые как в однопользовательском режиме, так и при обычной работе всем пользователям     |
-| `/etc`       | Общесистемные конфигурационные файлы и файлы конфигурации установленных программ                                           |
-| `/home`      | Содержит домашние директории пользователей, которые, в свою очередь, содержат персональные настройки и данные пользователя |
-| `/media`     | Точки монтирования для сменных носителей                                                                                   |
-| `/root`      | Домашняя директория пользователя  `root`                                                                                   |
-| `/tmp`       | Временные файлы                                                                                                            |
-| `/usr`       | Вторичная иерархия для данных пользователя                                                                                 |
-
-Более подробно про Unix см. в [@tanenbaum_book_modern-os_ru; @robbins_book_bash_en; @zarrelli_book_mastering-bash_en; @newham_book_learning-bash_en].
+Гаммирование представляет собой наложение (снятие) на открытые (зашифрованные) данные последовательности элементов других данных, 
+полученной с помощью некоторого криптографического алгоритма, для получения зашифрованных (открытых) данных. Иными словами, наложение
+гаммы — это сложение её элементов с элементами открытого (закрытого)
+текста по некоторому фиксированному модулю, значение которого представляет собой известную часть алгоритма шифрования.
+В соответствии с теорией криптоанализа, если в методе шифрования используется однократная вероятностная гамма (однократное гаммирование)
+той же длины, что и подлежащий сокрытию текст, то текст нельзя раскрыть.
+Даже при раскрытии части последовательности гаммы нельзя получить информацию о всём скрываемом тексте.
+Наложение гаммы по сути представляет собой выполнение операции
+сложения по модулю 2 (XOR) (обозначаемая знаком $\oplus$) между элементами
+гаммы и элементами подлежащего сокрытию текста. Напомним, как работает операция XOR над битами: $$ 0 \oplus 0 = 0, 0 \oplus 1 = 1, 1 \oplus 0 = 1, 1 \oplus 1 = 0.  $$
+Такой метод шифрования является симметричным, так как двойное прибавление одной и той же величины по модулю 2 восстанавливает исходное значение, 
+а шифрование и расшифрование выполняется одной и той же программой[-@1].
 
 # Выполнение лабораторной работы
 
-Описываются проведённые действия, в качестве иллюстрации даётся ссылка на иллюстрацию (рис. [-@fig:001]).
+1. Я реализовал необходимый программный комплекс.
 
-![Название рисунка](image/placeimg_800_600_tech.jpg){#fig:001 width=70%}
+```julia
+alphabet = 'а':'я'
+function Text_to_Numbers(Text::String, Alphabet::StepRange{Char, Int64} = alphabet)::Vector{Any}
+    numbers = []
+    for char in lowercase(Text)
+        push!(numbers, findfirst(c -> c == char, Alphabet))
+    end
+    return numbers
+end
+
+function Numbers_to_Text(Numbers::Vector{Any}, Alphabet::StepRange{Char, Int64} = alphabet)::String
+    text = ""
+    for number in Numbers
+        text *= alphabet[number]
+    end
+    return lowercase(text)
+end
+
+function Cipher_Gamma(Message::String, Gamma::String, Alphabet::StepRange{Char, Int64} = alphabet)::String
+    Message_Numbers = Text_to_Numbers(Message, Alphabet)
+    Gamma_Numbers = Text_to_Numbers(Gamma, Alphabet)
+    length_alphabet = length(Alphabet)
+    Encrypted_Numbers = []
+    for i in 1:length(Message_Numbers)
+        encrypted_number = (Message_Numbers[i] + Gamma_Numbers[(i-1) % length(Gamma_Numbers) + 1]) % length_alphabet
+        push!(Encrypted_Numbers, encrypted_number == 0 ? length_alphabet : encrypted_number)
+    end
+    return Numbers_to_Text(Encrypted_Numbers, Alphabet)
+end
+
+function Decipher_Gamma(Encrypted_Message::String, Gamma::String, Alphabet::StepRange{Char, Int64} = alphabet)::String
+    Encrypted_Numbers = Text_to_Numbers(Encrypted_Message, Alphabet)
+    Gamma_Numbers = Text_to_Numbers(Gamma, Alphabet)
+    length_alphabet = length(Alphabet)
+    Message_Numbers = []
+    for i in 1:length(Encrypted_Numbers)
+        message_number = (Encrypted_Numbers[i] - Gamma_Numbers[(i-1) % length(Gamma_Numbers) + 1]) % length_alphabet
+        push!(Message_Numbers, message_number == 0 ? length_alphabet : message_number)
+    end
+    return Numbers_to_Text(Message_Numbers, Alphabet)
+end
+
+message = "приказ"  
+gamma = "гамма"     
+println("Исходное сообщение: ", message, ";\nКонечная гамма шифрования: ", gamma)
+
+ciphertext = Cipher_Gamma(message, gamma)
+println("Результат шифрования: ", ciphertext)
+
+decrypted_message = Decipher_Gamma(ciphertext, gamma)
+println("Результат дешифрования: ", decrypted_message)
+```
+
+2. Получил результаты, аналогичные примеру (рис. [-@fig:001]).
+
+![Результат работы алгоритма](image/l3_1.png){#fig:001 width=70%}
 
 # Выводы
 
-Здесь кратко описываются итоги проделанной работы.
+Я реализовал алгоритм шифрование конечной гаммой.
 
 # Список литературы{.unnumbered}
 
